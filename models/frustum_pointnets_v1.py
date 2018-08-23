@@ -163,6 +163,9 @@ def get_model(point_cloud, one_hot_vec, is_training, bn_decay=None):
     # select masked points and translate to masked points' centroid
     object_point_cloud_xyz, mask_xyz_mean, end_points = \
         point_cloud_masking(point_cloud, logits, end_points)
+    
+    end_points['object_point_cloud_xyz'] = object_point_cloud_xyz
+    end_points['mask_xyz_mean'] = mask_xyz_mean
 
     # T-Net and coordinate translation
     center_delta, end_points = get_center_regression_net(\

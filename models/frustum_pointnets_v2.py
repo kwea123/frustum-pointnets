@@ -105,7 +105,7 @@ def get_3d_box_estimation_v2_net(object_point_cloud, one_hot_vec,
         is_training=is_training, bn_decay=bn_decay, scope='ssg-layer3')
 
     # Fully connected layers
-    net = tf.reshape(l3_points, [batch_size, -1])
+    net = tf.contrib.layers.flatten(l3_points)
     net = tf.concat([net, one_hot_vec], axis=1)
     net = tf_util.fully_connected(net, 512, bn=True,
         is_training=is_training, scope='fc1', bn_decay=bn_decay)
@@ -147,6 +147,9 @@ def get_model(point_cloud, one_hot_vec, is_training, bn_decay=None):
     # select masked points and translate to masked points' centroid
     object_point_cloud_xyz, mask_xyz_mean, end_points = \
         point_cloud_masking(point_cloud, logits, end_points)
+    
+    end_points['object_point_cloud_xyz'] = object_point_cloud_xyz
+    end_points['mask_xyz_mean'] = mask_xyz_mean
 
     # T-Net and coordinate translation
     center_delta, end_points = get_center_regression_net(\

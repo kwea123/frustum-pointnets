@@ -81,8 +81,8 @@ def get_box3d_corners_helper(centers, headings, sizes):
     #print x_corners, y_corners, z_corners
     c = tf.cos(headings)
     s = tf.sin(headings)
-    ones = tf.ones([N], dtype=tf.float32)
-    zeros = tf.zeros([N], dtype=tf.float32)
+    ones = tf.ones(tf.shape(headings), dtype=tf.float32)
+    zeros = tf.zeros(tf.shape(headings), dtype=tf.float32)
     row1 = tf.stack([c,zeros,s], axis=1) # (N,3)
     row2 = tf.stack([zeros,ones,zeros], axis=1)
     row3 = tf.stack([-s,zeros,c], axis=1)
@@ -106,16 +106,15 @@ def get_box3d_corners(center, heading_residuals, size_residuals):
     heading_bin_centers = tf.constant(np.arange(0,2*np.pi,2*np.pi/NUM_HEADING_BIN), dtype=tf.float32) # (NH,)
     headings = heading_residuals + tf.expand_dims(heading_bin_centers, 0) # (B,NH)
     
-    mean_sizes = tf.expand_dims(tf.constant(g_mean_size_arr, dtype=tf.float32), 0) + size_residuals # (B,NS,1)
+    mean_sizes = tf.expand_dims(tf.constant(g_mean_size_arr, dtype=tf.float32), 0) # (B,NS,1)
     sizes = mean_sizes + size_residuals # (B,NS,3)
     sizes = tf.tile(tf.expand_dims(sizes,1), [1,NUM_HEADING_BIN,1,1]) # (B,NH,NS,3)
     headings = tf.tile(tf.expand_dims(headings,-1), [1,1,NUM_SIZE_CLUSTER]) # (B,NH,NS)
     centers = tf.tile(tf.expand_dims(tf.expand_dims(center,1),1), [1,NUM_HEADING_BIN, NUM_SIZE_CLUSTER,1]) # (B,NH,NS,3)
 
-    N = batch_size*NUM_HEADING_BIN*NUM_SIZE_CLUSTER
-    corners_3d = get_box3d_corners_helper(tf.reshape(centers, [N,3]), tf.reshape(headings, [N]), tf.reshape(sizes, [N,3]))
+    corners_3d = get_box3d_corners_helper(tf.reshape(centers, [-1,3]), tf.reshape(headings, [-1,]), tf.reshape(sizes, [-1,3]))
 
-    return tf.reshape(corners_3d, [batch_size, NUM_HEADING_BIN, NUM_SIZE_CLUSTER, 8, 3])
+    return tf.reshape(corners_3d, [-1, NUM_HEADING_BIN, NUM_SIZE_CLUSTER, 8, 3])
 
 
 def huber_loss(error, delta):
@@ -152,7 +151,7 @@ def parse_output_to_tensors(output, end_points):
     size_residuals_normalized = tf.slice(output,
         [0,3+NUM_HEADING_BIN*2+NUM_SIZE_CLUSTER], [-1,NUM_SIZE_CLUSTER*3])
     size_residuals_normalized = tf.reshape(size_residuals_normalized,
-        [batch_size, NUM_SIZE_CLUSTER, 3]) # BxNUM_SIZE_CLUSTERx3
+        [-1, NUM_SIZE_CLUSTER, 3]) # BxNUM_SIZE_CLUSTERx3
     end_points['size_scores'] = size_scores
     end_points['size_residuals_normalized'] = size_residuals_normalized
     end_points['size_residuals'] = size_residuals_normalized * \
